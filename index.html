@@ -6,210 +6,253 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: url('lg-bg.jpg') no-repeat center center fixed;
-      background-size: cover;
-      backdrop-filter: blur(10px);
+      background: linear-gradient(#f0f0f0, #d0eafc);
       margin: 0;
       padding: 20px;
     }
 
     h1 {
       text-align: center;
-      color: #fff;
-      text-shadow: 2px 2px 5px #000;
+      color: #003366;
+    }
+
+    .timer {
+      text-align: center;
+      font-size: 18px;
+      color: #d32f2f;
+      font-weight: bold;
     }
 
     .container {
       display: flex;
-      justify-content: space-around;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .customers, .features {
+      display: flex;
+      justify-content: center;
       gap: 20px;
+      margin: 20px 0;
       flex-wrap: wrap;
-      margin-top: 30px;
+    }
+
+    .customer, .feature {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      position: relative;
+      cursor: pointer;
     }
 
     .customer {
-      width: 30%;
-      min-width: 280px;
-      background-color: rgba(255,255,255,0.9);
-      border: 2px dashed #444;
-      border-radius: 12px;
-      padding: 15px;
-      text-align: center;
-    }
-
-    .dropzone {
-      min-height: 100px;
-      margin-top: 10px;
-      padding: 10px;
-      background-color: #f7f7f7;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-
-    .card-pool {
-      text-align: center;
-      margin-top: 40px;
-    }
-
-    .card {
-      display: inline-block;
-      background-color: #e0f7fa;
-      color: #004d40;
-      padding: 10px 16px;
-      margin: 10px;
-      border-radius: 8px;
-      cursor: grab;
-      border: 2px solid #00796b;
-      transition: transform 0.2s;
-    }
-
-    .card.correct {
-      background-color: #c8e6c9;
-      border-color: #2e7d32;
-    }
-
-    .card.incorrect {
-      background-color: #ffcdd2;
-      border-color: #c62828;
-    }
-
-    .result {
-      text-align: center;
-      margin-top: 30px;
+      width: 280px;
+      font-size: 16px;
       font-weight: bold;
-      color: #fff;
+      border: 2px solid #1565c0;
+    }
+
+    .feature {
+      width: 160px;
+      font-size: 14px;
+      font-weight: normal;
+      border: 2px solid #90caf9;
+    }
+
+    .selected {
+      background-color: #c5e1a5;
+      border-color: #558b2f !important;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .titles {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 30px;
+      color: #333;
     }
 
     button {
-      margin-top: 20px;
       padding: 10px 20px;
-      background-color: #00796b;
+      margin: 20px auto;
+      display: block;
+      font-size: 16px;
+      background-color: #1976d2;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
     }
+
+    .wrong {
+      background-color: #ffcdd2 !important;
+      border-color: #c62828 !important;
+    }
   </style>
 </head>
 <body>
   <h1>LG 產品配對挑戰</h1>
+  <div class="timer" id="timer">⏳ 倒數：60 秒</div>
+
   <div class="container">
-    <div class="customer" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="AI影像pro,AI聲音pro,alpha影音處理晶片">
-      <h3>🎬 顧客A：我平常喜歡追劇看電影，希望畫面漂亮 聲音有臨場感。</h3>
-      <div class="dropzone"></div>
-    </div>
-    <div class="customer" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="AI智慧滑鼠遙控器,智慧語音搜尋功能">
-      <h3>📺 顧客B：沒有用過智慧電視，怕操作很困難。</h3>
-      <div class="dropzone"></div>
-    </div>
-    <div class="customer" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="零間隙壁掛,真無線影音傳輸技術">
-      <h3>🖼️ 顧客C：重視家裡的裝潢風格，想找壁掛安裝有質感的電視。</h3>
-      <div class="dropzone"></div>
-    </div>
+    <div class="titles">👥 顧客需求</div>
+    <div class="customers" id="customers"></div>
+
+    <div class="titles">🛠️ 產品特色推薦</div>
+    <div class="features" id="features"></div>
   </div>
 
-  <div class="card-pool" id="card-pool">
-    <!-- 卡片將由 JavaScript 動態生成 -->
-  </div>
-
-  <div class="result" id="result"></div>
-  <div style="text-align:center;">
-    <button onclick="submitGame()">✅ 送出答案</button>
-  </div>
+  <canvas id="canvas"></canvas>
+  <button onclick="submitAnswers()">✅ 送出答案</button>
 
   <script>
-    const allCards = [
-      "AI影像pro",
-      "AI聲音pro",
-      "alpha影音處理晶片",
-      "AI智慧滑鼠遙控器",
-      "智慧語音搜尋功能",
-      "零間隙壁掛",
-      "真無線影音傳輸技術"
+    const customers = [
+      {
+        id: 'A',
+        text: '我平常喜歡追劇看電影，希望畫面漂亮 聲音有臨場感',
+        answers: ['AI影像pro', 'AI聲音pro']
+      },
+      {
+        id: 'B',
+        text: '沒有用過智慧電視，怕操作很困難',
+        answers: ['AI智慧滑鼠遙控器', '智慧語音搜尋功能']
+      },
+      {
+        id: 'C',
+        text: '重視家裡的裝潢風格，想找壁掛安裝有質感的電視',
+        answers: ['零間隙壁掛', '真無線影音傳輸技術']
+      }
     ];
 
-    // 洗牌函式
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
+    const allFeatures = shuffle([
+      'AI影像pro', 'AI聲音pro', 'AI智慧滑鼠遙控器',
+      '智慧語音搜尋功能', '零間隙壁掛', '真無線影音傳輸技術'
+    ]);
+
+    let connections = {}; // { A: [feature1, feature2], ... }
+    let selectedCustomer = null;
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    function shuffle(arr) {
+      return arr.sort(() => Math.random() - 0.5);
     }
 
-    function initCards() {
-      const pool = document.getElementById("card-pool");
-      pool.innerHTML = '';
-      const shuffled = shuffle([...allCards]);
-      shuffled.forEach(text => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.textContent = text;
-        card.draggable = true;
-        card.ondragstart = drag;
-        pool.appendChild(card);
+    function render() {
+      const cDiv = document.getElementById('customers');
+      const fDiv = document.getElementById('features');
+      cDiv.innerHTML = '';
+      fDiv.innerHTML = '';
+
+      customers.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'customer';
+        div.textContent = `顧客${c.id}: ${c.text}`;
+        div.dataset.id = c.id;
+        div.onclick = () => selectCustomer(c.id);
+        cDiv.appendChild(div);
+      });
+
+      allFeatures.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'feature';
+        div.textContent = f;
+        div.dataset.name = f;
+        div.onclick = () => connectToFeature(f);
+        fDiv.appendChild(div);
+      });
+
+      drawLines();
+    }
+
+    function selectCustomer(id) {
+      selectedCustomer = id;
+      document.querySelectorAll('.customer').forEach(div => {
+        div.classList.toggle('selected', div.dataset.id === id);
       });
     }
 
-    function allowDrop(ev) {
-      ev.preventDefault();
+    function connectToFeature(feature) {
+      if (!selectedCustomer) return;
+      if (!connections[selectedCustomer]) connections[selectedCustomer] = [];
+      if (connections[selectedCustomer].includes(feature)) return;
+      if (connections[selectedCustomer].length >= 2) return;
+      connections[selectedCustomer].push(feature);
+      drawLines();
     }
 
-    function drag(ev) {
-      ev.dataTransfer.setData("text", ev.target.textContent);
-    }
+    function drawLines() {
+      canvas.width = window.innerWidth;
+      canvas.height = document.body.scrollHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#1565c0';
 
-    function drop(ev) {
-      ev.preventDefault();
-      const data = ev.dataTransfer.getData("text");
-      const targetZone = ev.target.closest(".dropzone");
-      const already = [...targetZone.querySelectorAll(".card")].some(c => c.textContent === data);
-      if (already) return;
-
-      const poolCard = [...document.querySelectorAll("#card-pool .card")].find(c => c.textContent === data);
-      if (poolCard) {
-        const clone = poolCard.cloneNode(true);
-        clone.classList.remove("dragging");
-        clone.draggable = false;
-        targetZone.appendChild(clone);
-        poolCard.remove();
-      }
-    }
-
-    function submitGame() {
-      const poolLeft = document.querySelectorAll("#card-pool .card").length;
-      if (poolLeft > 0) {
-        alert("請先將所有卡片放入顧客框中！");
-        return;
-      }
-
-      let allCorrect = true;
-
-      document.querySelectorAll(".customer").forEach(customer => {
-        const expected = customer.getAttribute("data-answer").split(",");
-        const zoneCards = [...customer.querySelectorAll(".dropzone .card")];
-        zoneCards.forEach(card => {
-          if (expected.includes(card.textContent)) {
-            card.classList.add("correct");
-          } else {
-            card.classList.add("incorrect");
-            allCorrect = false;
-          }
+      for (let cid in connections) {
+        const custEl = document.querySelector(`.customer[data-id='${cid}']`);
+        const rect1 = custEl.getBoundingClientRect();
+        connections[cid].forEach(f => {
+          const featEl = document.querySelector(`.feature[data-name='${f}']`);
+          const rect2 = featEl.getBoundingClientRect();
+          ctx.beginPath();
+          ctx.moveTo(rect1.left + rect1.width / 2, rect1.bottom + window.scrollY);
+          ctx.lineTo(rect2.left + rect2.width / 2, rect2.top + window.scrollY);
+          ctx.stroke();
         });
-      });
-
-      setTimeout(() => {
-        if (allCorrect) {
-          alert("🎉 超厲害，全部答對！");
-        } else {
-          const retry = confirm("❌ 答錯了，請重新作答！\n是否重新開始？");
-          if (retry) location.reload();
-        }
-      }, 300);
+      }
     }
 
-    // 初始化卡片
-    initCards();
+    function submitAnswers() {
+      let allCorrect = true;
+      document.querySelectorAll('.feature').forEach(f => f.classList.remove('wrong'));
+
+      for (let c of customers) {
+        const selected = connections[c.id] || [];
+        if (selected.length !== 2 || !selected.every(f => c.answers.includes(f))) {
+          allCorrect = false;
+          selected.forEach(f => {
+            const el = document.querySelector(`.feature[data-name='${f}']`);
+            if (el) el.classList.add('wrong');
+          });
+        }
+      }
+
+      if (allCorrect) {
+        clearInterval(timerInterval);
+        const scenarios = customers.map(c => `顧客${c.id}：${c.text}`);
+        const selected = scenarios[Math.floor(Math.random() * scenarios.length)];
+        alert(`🎯 全部答對！開始模擬銷售：\n${selected}`);
+      } else {
+        alert('❌ 有錯誤的配對，請重新選擇！');
+        connections = {};
+        render();
+      }
+    }
+
+    let time = 60;
+    const timerElement = document.getElementById("timer");
+    const timerInterval = setInterval(() => {
+      time--;
+      timerElement.textContent = `⏳ 倒數：${time} 秒`;
+      if (time <= 0) {
+        clearInterval(timerInterval);
+        alert("⌛ 時間到！請重新開始。\n頁面將重新載入。");
+        location.reload();
+      }
+    }, 1000);
+
+    window.addEventListener("resize", drawLines);
+    render();
   </script>
 </body>
 </html>

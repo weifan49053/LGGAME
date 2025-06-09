@@ -71,12 +71,6 @@
       background: #f0f8ff;
       border-color: #3498db;
     }
-    .answer.used {
-      background: #ddd;
-      color: #999;
-      cursor: default;
-      pointer-events: none;
-    }
     .matched-answers {
       margin-top: 12px;
       font-size: 14px;
@@ -173,7 +167,6 @@
           matchedList.push(text);
           matchMap.set(selectedBox, matchedList);
           document.getElementById("matched-" + selectedBox).textContent = matchedList.join("、");
-          ans.classList.add("used");
           selectedBox = null;
           document.querySelectorAll('.question-box').forEach(e => e.classList.remove('selected'));
         };
@@ -198,7 +191,9 @@
         const seconds = Math.floor((Date.now() - startTime) / 1000);
         last5Times.unshift(seconds);
         if (last5Times.length > 5) last5Times.pop();
-        alert("配對成功！請與顧客 " + (Math.floor(Math.random() * 3) + 1) + " 進行實地銷售演練！");
+        const targetIndex = Math.floor(Math.random() * 3);
+        const customerSentence = window.currentQuestions[targetIndex][0];
+        alert(`配對成功！\n請與顧客 ${targetIndex + 1} 進行實地銷售演練：\n「${customerSentence}」`);
         renderHistory();
         clearInterval(timer);
         setTimeout(() => {

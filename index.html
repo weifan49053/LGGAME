@@ -12,31 +12,16 @@
       padding: 20px;
       text-align: center;
     }
-    h1 {
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-    #timer {
-      font-size: 16px;
-      margin: 10px 0;
-    }
+    h1 { font-size: 28px; margin-bottom: 10px; }
+    #timer { font-size: 16px; margin: 10px 0; }
     #history {
       text-align: left;
       margin: 10px auto;
       font-size: 15px;
       max-width: 400px;
     }
-    .container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-    .questions {
-      display: flex;
-      justify-content: space-around;
-    }
+    .container { display: flex; flex-direction: column; gap: 20px; max-width: 900px; margin: auto; }
+    .questions { display: flex; justify-content: space-around; }
     .question-box {
       background: #fff;
       border-radius: 10px;
@@ -48,16 +33,8 @@
       font-size: 18px;
       transition: border-color 0.2s;
     }
-    .question-box.selected {
-      border-color: #2ecc71;
-      background-color: #f0fff4;
-    }
-    .answers {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-    }
+    .question-box.selected { border-color: #2ecc71; background-color: #f0fff4; }
+    .answers { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
     .answer {
       background: #ffffff;
       border-radius: 6px;
@@ -67,15 +44,8 @@
       border: 2px solid #ccc;
       transition: all 0.2s ease;
     }
-    .answer:hover {
-      background: #f0f8ff;
-      border-color: #3498db;
-    }
-    .matched-answers {
-      margin-top: 12px;
-      font-size: 14px;
-      color: #555;
-    }
+    .answer:hover { background: #f0f8ff; border-color: #3498db; }
+    .matched-answers { margin-top: 12px; font-size: 14px; color: #555; }
     button {
       margin-top: 10px;
       padding: 6px 12px;
@@ -86,9 +56,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background: #219150;
-    }
+    button:hover { background: #219150; }
   </style>
 </head>
 <body>
@@ -126,28 +94,39 @@
     let selectedBox = null;
     let matchMap = new Map();
     let startTime = Date.now();
-    let timer = setInterval(() => {
-      document.getElementById("time").textContent = Math.floor((Date.now() - startTime) / 1000);
-    }, 1000);
+    let timer;
     let last5Times = [];
+    let lastSelectedIndices = [];
+    let currentQuestionIndices = [];
 
     function shuffle(arr) {
       return [...arr].sort(() => Math.random() - 0.5);
     }
 
-    function initGame() {
-      const selected = shuffle(allData).slice(0, 3);
-      const allAnswers = [...new Set(selected.flatMap(d => d[1]))];
+    function resetTime() {
+      startTime = Date.now();
+      document.getElementById("time").textContent = "0";
+      clearInterval(timer);
+      timer = setInterval(() => {
+        document.getElementById("time").textContent = Math.floor((Date.now() - startTime) / 1000);
+      }, 1000);
+    }
+
+    function renderGame() {
       const qWrap = document.getElementById("questions");
       const aWrap = document.getElementById("answers");
       qWrap.innerHTML = "";
       aWrap.innerHTML = "";
       matchMap.clear();
+      selectedBox = null;
 
-      selected.forEach((item, index) => {
+      const selectedData = currentQuestionIndices.map(i => allData[i]);
+
+      // 題目
+      selectedData.forEach((data, index) => {
         const div = document.createElement("div");
         div.className = "question-box";
-        div.innerHTML = `<div>${item[0]}</div><div class="matched-answers" id="matched-${index}"></div>`;
+        div.innerHTML = `<div>${data[0]}</div><div class="matched-answers" id="matched-${index}"></div>`;
         div.onclick = () => {
           document.querySelectorAll('.question-box').forEach(e => e.classList.remove('selected'));
           selectedBox = index;
@@ -156,14 +135,17 @@
         qWrap.appendChild(div);
       });
 
-      shuffle(allAnswers).forEach(text => {
+      // 答案
+      const answerSet = new Set();
+      selectedData.forEach(item => item[1].forEach(ans => answerSet.add(ans)));
+      shuffle(Array.from(answerSet)).forEach(text => {
         const ans = document.createElement("div");
         ans.className = "answer";
         ans.textContent = text;
         ans.onclick = () => {
           if (selectedBox === null) return;
           const matchedList = matchMap.get(selectedBox) || [];
-          if (matchedList.length >= 2) return;
+          if (matchedList.length >= 2 || matchedList.includes(text)) return;
           matchedList.push(text);
           matchMap.set(selectedBox, matchedList);
           document.getElementById("matched-" + selectedBox).textContent = matchedList.join("、");
@@ -172,40 +154,45 @@
         };
         aWrap.appendChild(ans);
       });
+    }
 
-      window.currentQuestions = selected;
+    function initGame(selectNew = true, resetTimer = true) {
+      if (selectNew) {
+        let availableIndices = allData.map((_, i) => i).filter(i => !lastSelectedIndices.includes(i));
+        if (availableIndices.length < 3) availableIndices = allData.map((_, i) => i);
+        currentQuestionIndices = shuffle(availableIndices).slice(0, 3);
+        lastSelectedIndices = currentQuestionIndices;
+      }
+      renderGame();
+      if (resetTimer) resetTime();
     }
 
     function submit() {
+      const selectedData = currentQuestionIndices.map(i => allData[i]);
       let allCorrect = true;
-      for (let i = 0; i < 3; i++) {
-        const correct = window.currentQuestions[i][1];
+      for (let i = 0; i < selectedData.length; i++) {
+        const correct = selectedData[i][1];
         const selected = matchMap.get(i) || [];
-        const ok = correct.every(ans => selected.includes(ans)) && selected.length === correct.length;
-        if (!ok) {
+        if (!(correct.length === selected.length && correct.every(ans => selected.includes(ans)))) {
           allCorrect = false;
           break;
         }
       }
+
       if (allCorrect) {
         const seconds = Math.floor((Date.now() - startTime) / 1000);
         last5Times.unshift(seconds);
         if (last5Times.length > 5) last5Times.pop();
-        const targetIndex = Math.floor(Math.random() * 3);
-        const customerSentence = window.currentQuestions[targetIndex][0];
+
+        const targetIndex = Math.floor(Math.random() * selectedData.length);
+        const customerSentence = selectedData[targetIndex][0];
+
         alert(`配對成功！\n請與顧客 ${targetIndex + 1} 進行實地銷售演練：\n「${customerSentence}」`);
         renderHistory();
-        clearInterval(timer);
-        setTimeout(() => {
-          startTime = Date.now();
-          timer = setInterval(() => {
-            document.getElementById("time").textContent = Math.floor((Date.now() - startTime) / 1000);
-          }, 1000);
-          initGame();
-        }, 100);
+        initGame(true, true); // 換題目 + 重置時間
       } else {
         alert("有錯誤，請重新配對！");
-        initGame();
+        initGame(false, false); // 題目不換，時間不重置
       }
     }
 
@@ -219,7 +206,9 @@
       });
     }
 
-    initGame();
+    window.onload = () => {
+      initGame(true, true);
+    };
   </script>
 </body>
 </html>
